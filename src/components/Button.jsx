@@ -10,7 +10,7 @@ const ButtonLoad = styled.button`
   font-size: 15px;
   width: 200px;
   margin: 0 auto;
-
+  margin-bottom: 30px;
   &:hover {
     background-color: #b0f2c2;
   }

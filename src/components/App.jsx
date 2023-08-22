@@ -1,4 +1,4 @@
-import React, { Component } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import Searchbar from './Searchbar';
 import ImageGallery from './ImageGallery';
@@ -16,84 +16,78 @@ const AppDiv = styled.div`
   margin: 0 auto;
 `;
 
-class App extends Component {
-  state = {
-    images: [],
-    query: '',
-    page: 1,
-    isLoading: false,
-    showModal: false,
-    modalSrc: '',
-  };
+const App = () => {
+  const [images, setImages] = useState([]);
+  const [query, setQuery] = useState('');
+  const [page, setPage] = useState(1);
+  const [isLoading, setIsLoading] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const [modalSrc, setModalSrc] = useState('');
 
-  apiKey = '38935709-b029574ae436a7c060eaadb25';
+  const apiKey = '38935709-b029574ae436a7c060eaadb25';
 
-  componentDidUpdate(prevProps, prevState) {
-    if (prevState.query !== this.state.query) {
-      this.fetchImages();
+  const fetchImages = useCallback(() => {
+    if (query !== '') {
+      setIsLoading(true);
+
+      axios
+        .get(
+          `https://pixabay.com/api/?q=${query}&page=${page}&key=${apiKey}&image_type=photo&orientation=horizontal&per_page=12`
+        )
+        .then(response => {
+          setImages(prevImages => [...prevImages, ...response.data.hits]);
+        })
+        .catch(error => console.error(error))
+        .finally(() => {
+          setIsLoading(false);
+        });
     }
-  }
+  }, [apiKey, query, page]);
 
-  fetchImages = () => {
-    const { query, page } = this.state;
-    this.setState({ isLoading: true });
+  useEffect(() => {
+    if (query !== '') {
+      fetchImages();
+    }
+  }, [query, fetchImages, page]);
 
-    axios
-      .get(
-        `https://pixabay.com/api/?q=${query}&page=${page}&key=${this.apiKey}&image_type=photo&orientation=horizontal&per_page=12`
-      )
-      .then(response => {
-        this.setState(prevState => ({
-          images: [...prevState.images, ...response.data.hits],
-          page: prevState.page + 1,
-        }));
-      })
-      .catch(error => console.error(error))
-      .finally(() => {
-        this.setState({ isLoading: false });
-      });
+  const handleSearchSubmit = newQuery => {
+    setQuery(newQuery);
+    setImages([]);
+    setPage(1);
   };
 
-  handleSearchSubmit = query => {
-    this.setState({ query, images: [], page: 1 });
+  const handleLoadMore = () => {
+    setPage(prevPage => prevPage + 1);
   };
 
-  handleLoadMore = () => {
-    this.fetchImages();
+  const handleImageClick = src => {
+    setShowModal(true);
+    setModalSrc(src);
   };
 
-  handleImageClick = src => {
-    this.setState({ showModal: true, modalSrc: src });
+  const handleCloseModal = () => {
+    setShowModal(false);
+    setModalSrc('');
   };
 
-  handleCloseModal = () => {
-    this.setState({ showModal: false, modalSrc: '' });
-  };
-
-  render() {
-    const { images, isLoading, showModal, modalSrc } = this.state;
-
-    return (
-      <AppDiv className="app">
-        <Searchbar onSubmit={this.handleSearchSubmit} />
-        <ImageGallery>
-          {images.map(image => (
-            <ImageGalleryItem
-              key={image.id}
-              webformatURL={image.webformatURL}
-              largeImageURL={image.largeImageURL}
-              onClick={() => this.handleImageClick(image.largeImageURL)}
-            />
-          ))}
-        </ImageGallery>
-        {isLoading && <Loader />}
-        {images.length > 0 && !isLoading && (
-          <Button onClick={this.handleLoadMore} />
-        )}
-        {showModal && <Modal src={modalSrc} onClose={this.handleCloseModal} />}
-      </AppDiv>
-    );
-  }
-}
+  return (
+    <AppDiv className="app">
+      <Searchbar onSubmit={handleSearchSubmit} />
+      <ImageGallery>
+        {images.map(image => (
+          <ImageGalleryItem
+            key={image.id}
+            webformatURL={image.webformatURL}
+            largeImageURL={image.largeImageURL}
+            onClick={() => handleImageClick(image.largeImageURL)}
+          />
+        ))}
+      </ImageGallery>
+      {isLoading && <Loader />} {/* Import and use Loader here */}
+      {images.length > 0 && !isLoading && <Button onClick={handleLoadMore} />}
+      {showModal && <Modal src={modalSrc} onClose={handleCloseModal} />}
+    </AppDiv>
+  );
+};
 
 export default App;
